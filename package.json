@@ -1,0 +1,27 @@
+{
+  "name": "jugsev-tgbot",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Torbochka/jugsev-tgbot.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Torbochka/jugsev-tgbot/issues"
+  },
+  "homepage": "https://github.com/Torbochka/jugsev-tgbot#readme",
+  "dependencies": {
+    "telegraf": "^3.38.0",
+    "dotenv": "^8.2.0"
+  },
+  "devDependencies": {
+    "prettier": "^2.0.5",
+    "eslint": "^7.0.0"
+  }
+}
