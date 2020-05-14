@@ -4,6 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "start": "node ./app.js",
+    "nodemon": "nodemon ./app.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -18,10 +20,13 @@
   "homepage": "https://github.com/Torbochka/jugsev-tgbot#readme",
   "dependencies": {
     "telegraf": "^3.38.0",
-    "dotenv": "^8.2.0"
+    "axios": "^0.19.2",
+    "dotenv": "^8.2.0",
+    "prismic-javascript": "^2.7.1"
   },
   "devDependencies": {
     "prettier": "^2.0.5",
-    "eslint": "^7.0.0"
+    "eslint": "^7.0.0",
+    "nodemon": "^2.0.4"
   }
 }
