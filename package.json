@@ -1,11 +1,10 @@
 {
   "name": "jugsev-tgbot",
-  "version": "1.0.0",
+  "version": "0.0.0",
   "description": "",
-  "main": "index.js",
   "scripts": {
-    "start": "node ./app.js",
-    "nodemon": "nodemon ./app.js",
+    "start": "TS_NODE_FILES=1 ts-node app.ts -r ts-node/register",
+    "nodemon": "TS_NODE_FILES=1 nodemon --exec ts-node app.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -19,14 +18,16 @@
   },
   "homepage": "https://github.com/Torbochka/jugsev-tgbot#readme",
   "dependencies": {
-    "telegraf": "^3.38.0",
-    "axios": "^0.19.2",
     "dotenv": "^8.2.0",
-    "prismic-javascript": "^2.7.1"
+    "prismic-javascript": "^3.0.0",
+    "telegraf": "^3.38.0",
+    "typescript": "^3.9.5",
+    "ts-node": "^8.10.2"
   },
   "devDependencies": {
     "prettier": "^2.0.5",
     "eslint": "^7.0.0",
-    "nodemon": "^2.0.4"
+    "nodemon": "^2.0.2",
+    "@types/node": "^14.0.11"
   }
 }
