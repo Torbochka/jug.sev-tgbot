@@ -4,7 +4,7 @@ import { Markup, Telegraf } from 'telegraf';
 import ResolvedApi from 'prismic-javascript/types/ResolvedApi';
 import ApiSearchResponse from 'prismic-javascript/types/ApiSearchResponse';
 import { Document } from 'prismic-javascript/types/documents';
-import { KeyboardButton } from 'telegraf/typings/markup';
+import { CallbackButton, InlineKeyboardButton } from 'telegraf/typings/markup';
 
 config();
 
@@ -21,7 +21,7 @@ bot.start(async ({ reply }) => {
   );
 });
 
-const splitArray = (array: String[], chunks: number): String[][] => {
+const splitArray = <T>(array: T[], chunks: number): T[][] => {
   const subarray = [];
   for (let i = 0; i < Math.ceil(array.length / chunks); i++) {
     subarray[i] = array.slice(i * chunks, i * chunks + chunks);
@@ -31,17 +31,23 @@ const splitArray = (array: String[], chunks: number): String[][] => {
 
 bot.hears('🤟Встречи', async ({ reply }) => {
   const eventDocument = await getEventDocument(api);
+
   if (eventDocument) {
-    const events = await getEventNames(<EventDocument>eventDocument);
-    const keyboardButton = splitArray(events, 2);
+    const events: String[] = await getEventNames(<EventDocument>eventDocument);
+    const buttons = events.map<CallbackButton>(
+      (eventName: String) =>
+        <CallbackButton>{
+          text: eventName,
+          hide: false,
+          callback_data: 'events'
+        }
+    );
+
+    const inlineKeyboardButton = splitArray<InlineKeyboardButton>(buttons, 2);
 
     return reply(
       'Предыдущие встречи',
-      // TODO нужно приводить к типу?
-      Markup.keyboard(<KeyboardButton[][]>keyboardButton)
-        .oneTime()
-        .resize()
-        .extra()
+      Markup.inlineKeyboard(inlineKeyboardButton).oneTime().resize().extra()
     );
   }
 
