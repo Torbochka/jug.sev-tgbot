@@ -5,6 +5,7 @@ import ResolvedApi from 'prismic-javascript/types/ResolvedApi';
 import ApiSearchResponse from 'prismic-javascript/types/ApiSearchResponse';
 import { Document } from 'prismic-javascript/types/documents';
 import { CallbackButton, InlineKeyboardButton } from 'telegraf/typings/markup';
+import { TelegrafContext } from 'telegraf/typings/context';
 
 config();
 
@@ -13,11 +14,10 @@ let api: ResolvedApi;
 
 bot.start(async ({ reply }) => {
   api = await Prismic.api('https://jug-sev.prismic.io/api/v2');
-  console.log(api);
 
   return reply(
-    '🤟Встречи',
-    Markup.keyboard(['🤟Встречи']).oneTime().resize().extra()
+    'Встречи',
+    Markup.keyboard(['Встречи']).oneTime().resize().extra()
   );
 });
 
@@ -29,18 +29,13 @@ const splitArray = <T>(array: T[], chunks: number): T[][] => {
   return subarray;
 };
 
-bot.hears('🤟Встречи', async ({ reply }) => {
+bot.hears('Встречи', async ({ reply }) => {
   const eventDocument = await getEventDocument(api);
 
   if (eventDocument) {
-    const events: String[] = await getEventNames(<EventDocument>eventDocument);
-    const buttons = events.map<CallbackButton>(
-      (eventName: String) =>
-        <CallbackButton>{
-          text: eventName,
-          hide: false,
-          callback_data: 'events'
-        }
+    const events: string[] = await getEventNames(<EventDocument>eventDocument);
+    const buttons = events.map<CallbackButton>((eventName: string) =>
+      Markup.callbackButton(eventName, eventName)
     );
 
     const inlineKeyboardButton = splitArray<InlineKeyboardButton>(buttons, 2);
@@ -52,6 +47,18 @@ bot.hears('🤟Встречи', async ({ reply }) => {
   }
 
   return reply('Список предыдущих встреч пуст..');
+});
+
+bot.on('callback_query', (ctx: TelegrafContext) => {
+  if (
+    ctx.callbackQuery &&
+    ctx.callbackQuery.message &&
+    ctx.callbackQuery.message.text &&
+    ctx.callbackQuery.message.text === 'Предыдущие встречи' &&
+    ctx.callbackQuery.data
+  ) {
+    console.log(ctx.callbackQuery.data);
+  }
 });
 
 bot.launch();
@@ -82,7 +89,7 @@ export interface EventDocument extends Document {
   data: EventDataDocument;
 }
 
-const getEventNames = (document: EventDocument): String[] | [] => {
+const getEventNames = (document: EventDocument): string[] | [] => {
   const events: Event[] = document.data.body;
 
   if (Array.isArray(events) && !events.length) {
