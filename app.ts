@@ -46,18 +46,44 @@ bot.hears('Встречи', async ({ reply }) => {
     );
   }
 
-  return reply('Список предыдущих встреч пуст..');
+  return reply('Что-то пошло не так...');
 });
 
-bot.on('callback_query', (ctx: TelegrafContext) => {
+bot.on('callback_query', async (ctx: TelegrafContext) => {
+  const messageText = 'Предыдущие встречи';
+
   if (
     ctx.callbackQuery &&
     ctx.callbackQuery.message &&
     ctx.callbackQuery.message.text &&
-    ctx.callbackQuery.message.text === 'Предыдущие встречи' &&
+    ctx.callbackQuery.message.text === messageText &&
     ctx.callbackQuery.data
   ) {
-    console.log(ctx.callbackQuery.data);
+    const eventDocument = await getEventDocument(api);
+    if (eventDocument) {
+      const event = getEventByName(ctx.callbackQuery.data, eventDocument);
+      if (event) {
+        const speakers = getEventSpeakers(event);
+        const titles: string[] = getSpeakerTitles(speakers);
+        const buttons = titles.map<CallbackButton>((title: string) => {
+          return Markup.callbackButton(title, '');
+        });
+
+        const inlineKeyboardButton = splitArray<InlineKeyboardButton>(
+          buttons,
+          1
+        );
+
+        console.log(inlineKeyboardButton);
+
+        return ctx.reply(
+          'Доклады',
+          Markup.inlineKeyboard(inlineKeyboardButton).oneTime().resize().extra()
+        );
+      }
+    }
+
+    return ctx.reply('Что-то пошло не так...');
   }
 });
 
@@ -89,14 +115,37 @@ export interface EventDocument extends Document {
   data: EventDataDocument;
 }
 
-const getEventNames = (document: EventDocument): string[] | [] => {
-  const events: Event[] = document.data.body;
+const getEventNames = (document: EventDocument): string[] => {
+  // if (!document.data.hasOwnProperty('body')) {
+  //   return undefined;
+  // }
 
-  if (Array.isArray(events) && !events.length) {
-    return [];
-  }
+  const events: Event[] = document.data.body;
 
   return events.map((event: Event) => {
     return event.primary['meeting-title'][0].text;
   });
+};
+
+const getEventByName = (
+  eventName: string,
+  document: EventDocument
+): Event | undefined => {
+  // if (!document.data.hasOwnProperty('body')) {
+  //   return undefined;
+  // }
+
+  const events: Event[] = document.data.body;
+
+  return events.find(
+    (event: Event) => event.primary['meeting-title'][0].text === eventName
+  );
+};
+
+const getEventSpeakers = (event: Event): Speaker[] => {
+  return event.items;
+};
+
+const getSpeakerTitles = (speakers: Speaker[]): string[] => {
+  return speakers.map((speaker: Speaker) => speaker['report-title'][0].text);
 };

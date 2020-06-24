@@ -1,8 +1,10 @@
+declare interface Size {
+  width: number;
+  height: number;
+}
+
 declare interface Photo {
-  dimensions: {
-    width: number;
-    height: number;
-  };
+  dimensions: Size;
   alt?: string;
   copyright?: string;
   url: string;
