@@ -1,4 +1,5 @@
 import { config } from 'dotenv';
+import { v5 as uuidv5 } from 'uuid';
 import Prismic from 'prismic-javascript';
 import { Markup, Telegraf } from 'telegraf';
 import ResolvedApi from 'prismic-javascript/types/ResolvedApi';
@@ -6,37 +7,34 @@ import ApiSearchResponse from 'prismic-javascript/types/ApiSearchResponse';
 import { Document } from 'prismic-javascript/types/documents';
 import { CallbackButton, InlineKeyboardButton } from 'telegraf/typings/markup';
 import { TelegrafContext } from 'telegraf/typings/context';
+import { splitArray } from './utils';
 
 config();
 
 const bot = new Telegraf(process.env.BOT_TOKEN || '');
 let api: ResolvedApi;
+let cache = new Map();
 
 bot.start(async ({ reply }) => {
-  api = await Prismic.api('https://jug-sev.prismic.io/api/v2');
-
   return reply(
     'Встречи',
     Markup.keyboard(['Встречи']).oneTime().resize().extra()
   );
 });
 
-const splitArray = <T>(array: T[], chunks: number): T[][] => {
-  const subarray = [];
-  for (let i = 0; i < Math.ceil(array.length / chunks); i++) {
-    subarray[i] = array.slice(i * chunks, i * chunks + chunks);
-  }
-  return subarray;
-};
-
 bot.hears('Встречи', async ({ reply }) => {
+  api = await Prismic.api(process.env.API_ENDPOINT || '');
   const eventDocument = await getEventDocument(api);
+  cache = new Map();
+  cache.set('events', eventDocument);
 
   if (eventDocument) {
     const events: string[] = await getEventNames(<EventDocument>eventDocument);
-    const buttons = events.map<CallbackButton>((eventName: string) =>
-      Markup.callbackButton(eventName, eventName)
-    );
+    const buttons = events.map<CallbackButton>((eventName: string) => {
+      const id = uuidv5(eventName, uuidv5.DNS);
+      cache.set(id, eventName);
+      return Markup.callbackButton(eventName, id);
+    });
 
     const inlineKeyboardButton = splitArray<InlineKeyboardButton>(buttons, 2);
 
@@ -57,34 +55,30 @@ bot.on('callback_query', async (ctx: TelegrafContext) => {
     ctx.callbackQuery.message &&
     ctx.callbackQuery.message.text &&
     ctx.callbackQuery.message.text === messageText &&
-    ctx.callbackQuery.data
+    ctx.callbackQuery.data !== undefined
   ) {
-    const eventDocument = await getEventDocument(api);
-    if (eventDocument) {
-      const event = getEventByName(ctx.callbackQuery.data, eventDocument);
-      if (event) {
-        const speakers = getEventSpeakers(event);
-        const titles: string[] = getSpeakerTitles(speakers);
-        const buttons = titles.map<CallbackButton>((title: string) => {
-          return Markup.callbackButton(title, '');
-        });
+    const eventDocument: EventDocument = cache.get('events');
+    const eventName: string = cache.get(ctx.callbackQuery.data);
+    const event: Event | undefined = getEventByName(eventName, eventDocument);
 
-        const inlineKeyboardButton = splitArray<InlineKeyboardButton>(
-          buttons,
-          1
-        );
+    if (event) {
+      const speakers = getEventSpeakers(event);
+      const titles: string[] = getSpeakerTitles(speakers);
+      const buttons = titles.map<CallbackButton>((title: string) => {
+        return Markup.callbackButton(title, 'gf');
+      });
 
-        console.log(inlineKeyboardButton);
+      const inlineKeyboardButton = splitArray<InlineKeyboardButton>(buttons, 1);
+      await ctx.answerCbQuery();
 
-        return ctx.reply(
-          'Доклады',
-          Markup.inlineKeyboard(inlineKeyboardButton).oneTime().resize().extra()
-        );
-      }
+      return ctx.reply(
+        'Доклады',
+        Markup.inlineKeyboard(inlineKeyboardButton).oneTime().resize().extra()
+      );
     }
-
-    return ctx.reply('Что-то пошло не так...');
   }
+
+  return ctx.reply('Что-то пошло не так...');
 });
 
 bot.launch();
