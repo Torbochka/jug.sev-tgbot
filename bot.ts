@@ -1,5 +1,4 @@
 import { config } from 'dotenv';
-import { v5 as uuidv5 } from 'uuid';
 import Prismic from 'prismic-javascript';
 import { Markup, Telegraf } from 'telegraf';
 import ResolvedApi from 'prismic-javascript/types/ResolvedApi';
@@ -12,8 +11,6 @@ import { splitArray } from './utils';
 config();
 
 const bot = new Telegraf(process.env.BOT_TOKEN || '');
-let api: ResolvedApi;
-let cache = new Map();
 
 bot.start(async ({ reply }) => {
   return reply(
@@ -23,17 +20,16 @@ bot.start(async ({ reply }) => {
 });
 
 bot.hears('Встречи', async ({ reply }) => {
-  api = await Prismic.api(process.env.API_ENDPOINT || '');
+  let api: ResolvedApi = await Prismic.api(process.env.API_ENDPOINT || '');
   const eventDocument = await getEventDocument(api);
-  cache = new Map();
-  cache.set('events', eventDocument);
 
   if (eventDocument) {
     const events: string[] = await getEventNames(<EventDocument>eventDocument);
     const buttons = events.map<CallbackButton>((eventName: string) => {
-      const id = uuidv5(eventName, uuidv5.DNS);
-      cache.set(id, eventName);
-      return Markup.callbackButton(eventName, id);
+      return Markup.callbackButton(
+        eventName,
+        `{"type": "events", "data": "${eventName}"}`
+      );
     });
 
     const inlineKeyboardButton = splitArray<InlineKeyboardButton>(buttons, 2);
@@ -48,33 +44,54 @@ bot.hears('Встречи', async ({ reply }) => {
 });
 
 bot.on('callback_query', async (ctx: TelegrafContext) => {
-  const messageText = 'Предыдущие встречи';
+  const data = ctx?.callbackQuery?.data;
 
-  if (
-    ctx.callbackQuery &&
-    ctx.callbackQuery.message &&
-    ctx.callbackQuery.message.text &&
-    ctx.callbackQuery.message.text === messageText &&
-    ctx.callbackQuery.data !== undefined
-  ) {
-    const eventDocument: EventDocument = cache.get('events');
-    const eventName: string = cache.get(ctx.callbackQuery.data);
-    const event: Event | undefined = getEventByName(eventName, eventDocument);
+  if (data) {
+    let api: ResolvedApi = await Prismic.api(process.env.API_ENDPOINT || '');
+    const eventDocument: EventDocument | undefined = await getEventDocument(
+      api
+    );
 
-    if (event) {
-      const speakers = getEventSpeakers(event);
-      const titles: string[] = getSpeakerTitles(speakers);
-      const buttons = titles.map<CallbackButton>((title: string) => {
-        return Markup.callbackButton(title, 'gf');
-      });
+    if (eventDocument) {
+      const { type, data: eventName } = JSON.parse(data);
 
-      const inlineKeyboardButton = splitArray<InlineKeyboardButton>(buttons, 1);
-      await ctx.answerCbQuery();
+      if (type === 'events') {
+        const event: Event | undefined = getEventByName(
+          eventName,
+          eventDocument
+        );
 
-      return ctx.reply(
-        'Доклады',
-        Markup.inlineKeyboard(inlineKeyboardButton).oneTime().resize().extra()
-      );
+        if (event) {
+          await ctx.answerCbQuery();
+
+          const speakers = getEventSpeakers(event);
+          const titles: string[] = getSpeakerTitles(speakers);
+          const names: string[] = getSpeakerNames(speakers);
+          const descriptions: string[] = getSpeakerDescriptions(speakers);
+          const codes: string[] = getYoutubeCodes(speakers);
+
+          for (let i = 0; i < titles.length; i++) {
+            try {
+              const name: string = names[i];
+              const title: string = titles[i];
+              const desc: string = descriptions[i];
+              const code: string = codes[i];
+              const description: string = [
+                `*${title}*\n\n`,
+                `_${name}_\n\n`,
+                `${desc}\n`,
+                `https://youtu.be/${code}`
+              ].join('');
+
+              await ctx.replyWithMarkdown(description);
+            } catch (e) {
+              console.log(e);
+            }
+          }
+
+          return;
+        }
+      }
     }
   }
 
@@ -137,9 +154,23 @@ const getEventByName = (
 };
 
 const getEventSpeakers = (event: Event): Speaker[] => {
-  return event.items;
+  return event?.items || [];
 };
 
 const getSpeakerTitles = (speakers: Speaker[]): string[] => {
   return speakers.map((speaker: Speaker) => speaker['report-title'][0].text);
+};
+
+const getSpeakerNames = (speakers: Speaker[]): string[] => {
+  return speakers.map((speaker: Speaker) => speaker['speaker-name'][0].text);
+};
+
+const getSpeakerDescriptions = (speakers: Speaker[]): string[] => {
+  return speakers.map(
+    (speaker: Speaker) => speaker['report-description'][0].text
+  );
+};
+
+const getYoutubeCodes = (speakers: Speaker[]): string[] => {
+  return speakers.map((speaker: Speaker) => speaker['youtube-code'][0].text);
 };

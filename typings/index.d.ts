@@ -34,7 +34,7 @@ declare interface Speaker {
   'anchor-report-section': Heading1;
 }
 
-declare interface Metting {
+declare interface Meeting {
   'meeting-title': Heading1;
   'meeting-description': Paragraph;
   'section-report-title': Heading1;
@@ -46,7 +46,7 @@ declare interface Event {
   slice_type: 'event';
   slice_label?: string;
   items: Speaker[];
-  primary: Metting;
+  primary: Meeting;
 }
 
 declare interface EventDataDocument {
