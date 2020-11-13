@@ -8,7 +8,7 @@ import {
   getEventDocument,
   getEventNames,
   splitArray
-} from '../utils';
+} from '../helpers/helpers';
 
 export const eventsMiddleware = async ({ reply }: TelegrafContext) => {
   let api: ResolvedApi = await Prismic.api(process.env.API_ENDPOINT || '');

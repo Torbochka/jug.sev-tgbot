@@ -10,7 +10,7 @@ import {
   getSpeakerNames,
   getSpeakerTitles,
   getYoutubeCodes
-} from '../utils';
+} from '../helpers/helpers';
 
 export const eventMiddleware = async (ctx: TelegrafContext) => {
   const data = ctx?.callbackQuery?.data;
